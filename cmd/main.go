@@ -4,12 +4,18 @@ import (
 	"fmt"
 	"github.com/dan-scott/adventofcode2018/days/day1"
 	"github.com/dan-scott/adventofcode2018/days/day2"
+	"github.com/dan-scott/adventofcode2018/days/day3"
+	"github.com/dan-scott/adventofcode2018/days/day4"
+	"github.com/dan-scott/adventofcode2018/days/day5"
 	"github.com/dan-scott/adventofcode2018/domain"
 )
 
 var solvers = []domain.Day{
 	day1.New(),
 	day2.New(),
+	day3.New(),
+	day4.New(),
+	day5.New(),
 }
 
 func main() {
@@ -21,7 +27,7 @@ func main() {
 			fmt.Println(r)
 		}
 		if s.Part2 != nil {
-			fmt.Printf("\tSolving part 1... ")
+			fmt.Printf("\tSolving part 2... ")
 			r := s.Part2()
 			fmt.Println(r)
 		}
