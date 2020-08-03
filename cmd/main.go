@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/dan-scott/adventofcode2018/days/day1"
 	"github.com/dan-scott/adventofcode2018/days/day2"
 	"github.com/dan-scott/adventofcode2018/days/day3"
 	"github.com/dan-scott/adventofcode2018/days/day4"
 	"github.com/dan-scott/adventofcode2018/days/day5"
+	"github.com/dan-scott/adventofcode2018/days/day6"
 	"github.com/dan-scott/adventofcode2018/domain"
 )
 
@@ -16,6 +18,7 @@ var solvers = []domain.Day{
 	day3.New(),
 	day4.New(),
 	day5.New(),
+	day6.New(),
 }
 
 func main() {
