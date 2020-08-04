@@ -27,70 +27,116 @@ func solvePart2() interface{} {
 
 type nodeMap map[string]*node
 
-func (m nodeMap) getInOrder() []*node {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	nodes := make([]*node, len(keys), len(keys))
-	for i, key := range keys {
-		node, _ := m[key]
-		nodes[i] = node
-	}
-
-	return nodes
+type graph struct {
+	roots edges
+	nodes edges
 }
 
-type graph struct {
-	roots nodeMap
-	nodes nodeMap
+func newGraph() *graph {
+	return &graph{
+		nodes: newEdges(),
+		roots: newEdges(),
+	}
 }
 
 func (g *graph) getNode(id string) *node {
-	graphNode, ok := g.nodes[id]
+	graphNode, ok := g.nodes.get(id)
 	if !ok {
-		graphNode = &node{
-			id:       id,
-			parents:  make(map[string]*node),
-			children: make(map[string]*node),
-		}
-		g.nodes[id] = graphNode
+		graphNode = newNode(id, g)
+		g.nodes.addNode(graphNode)
 	}
 
 	return graphNode
 }
 
+type edges struct {
+	nodes nodeMap
+	order []string
+}
+
+func newEdges() edges {
+	return edges{
+		nodes: make(map[string]*node),
+		order: make([]string, 0, 0),
+	}
+}
+
+func (e *edges) updateOrder() {
+	e.order = make([]string, 0, len(e.nodes))
+	for id := range e.nodes {
+		e.order = append(e.order, id)
+	}
+	sort.Strings(e.order)
+}
+
+func (e *edges) addNode(nodes ...*node) {
+	for _, n := range nodes {
+		e.nodes[n.id] = n
+	}
+	e.updateOrder()
+}
+
+func (e *edges) removeNode(n *node) {
+	delete(e.nodes, n.id)
+	e.updateOrder()
+}
+
+func (e *edges) get(id string) (*node, bool) {
+	n, ok := e.nodes[id]
+	return n, ok
+}
+
+func (e *edges) getInOrder() []*node {
+	nodes := make([]*node, len(e.order), len(e.order))
+	for i, id := range e.order {
+		nodes[i] = e.nodes[id]
+	}
+	return nodes
+}
+
+func (e *edges) any() bool {
+	return len(e.nodes) > 0
+}
+
+func (e *edges) pop() (*node, bool) {
+	if !e.any() {
+		return nil, false
+	}
+	n := e.nodes[e.order[0]]
+	delete(e.nodes, n.id)
+	e.updateOrder()
+	return n, true
+}
+
 type node struct {
 	id       string
-	parents  nodeMap
-	children nodeMap
+	parents  edges
+	children edges
+	graph    *graph
+}
+
+func newNode(id string, graph *graph) *node {
+	return &node{
+		id:       id,
+		parents:  newEdges(),
+		children: newEdges(),
+		graph:    graph,
+	}
+}
+
+func (n *node) addChild(c *node) {
+	n.children.addNode(c)
+	c.parents.addNode(n)
+	n.graph.roots.removeNode(c)
+}
+
+func (n *node) removeParent(p *node) {
+	n.parents.removeNode(p)
+	p.children.removeNode(n)
 }
 
 func getExecOrder(input string) string {
-	nodeGraph := &graph{
-		roots: make(map[string]*node),
-		nodes: make(map[string]*node),
-	}
-	ordering := parseInput(input)
-	for parent := range ordering {
-		parentNode := nodeGraph.getNode(parent)
-		nodeGraph.roots[parent] = parentNode
-	}
-
-	for parent, children := range ordering {
-		parentNode := nodeGraph.getNode(parent)
-		for _, child := range children {
-			childNode := nodeGraph.getNode(child)
-			parentNode.children[child] = childNode
-			childNode.parents[parent] = parentNode
-			_, isChildInRoot := nodeGraph.roots[child]
-			if isChildInRoot {
-				delete(nodeGraph.roots, child)
-			}
-		}
-	}
+	nodeGraph := parseInput(input)
 
 	stack := nodeGraph.roots.getInOrder()
 	var top *node
@@ -99,16 +145,16 @@ func getExecOrder(input string) string {
 
 	for len(stack) > 0 {
 		top, stack = stack[0], stack[1:]
-		if len(top.parents) > 0 || strings.Contains(order, top.id) {
+		if top.parents.any() || strings.Contains(order, top.id) {
 			continue
 		}
 		order = fmt.Sprintf("%s%s", order, top.id)
 
-		for _, child := range top.children {
-			delete(child.parents, top.id)
-		}
-
 		stack = append(top.children.getInOrder(), stack...)
+
+		for _, child := range top.children.nodes {
+			child.removeParent(top)
+		}
 
 		sort.Slice(stack, func(i, j int) bool {
 			return stack[i].id < stack[j].id
@@ -120,7 +166,7 @@ func getExecOrder(input string) string {
 
 var parser = regexp.MustCompile(`Step (\w) must be finished before step (\w) can begin.`)
 
-func parseInput(input string) map[string][]string {
+func parseInput(input string) *graph {
 	lines := strings.Split(input, "\n")
 
 	instructions := make(map[string][]string)
@@ -138,5 +184,20 @@ func parseInput(input string) map[string][]string {
 		instructions[a] = append(aList, b)
 	}
 
-	return instructions
+	nodeGraph := newGraph()
+
+	for parent := range instructions {
+		parentNode := nodeGraph.getNode(parent)
+		nodeGraph.roots.addNode(parentNode)
+	}
+
+	for parent, children := range instructions {
+		parentNode := nodeGraph.getNode(parent)
+		for _, child := range children {
+			childNode := nodeGraph.getNode(child)
+			parentNode.addChild(childNode)
+		}
+	}
+
+	return nodeGraph
 }
