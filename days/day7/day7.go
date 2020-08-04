@@ -22,7 +22,7 @@ func solvePart1() interface{} {
 }
 
 func solvePart2() interface{} {
-	return ""
+	return getParalellExecTime(input, 5, 60)
 }
 
 type nodeMap map[string]*node
@@ -43,10 +43,30 @@ func (g *graph) getNode(id string) *node {
 	graphNode, ok := g.nodes.get(id)
 	if !ok {
 		graphNode = newNode(id, g)
-		g.nodes.addNode(graphNode)
+		g.nodes.add(graphNode)
 	}
 
 	return graphNode
+}
+
+func (g *graph) popRoot() *node {
+	n := g.roots.first()
+	g.removeRootNode(n.id)
+	return n
+}
+
+func (g *graph) removeRootNode(id string) {
+	n, ok := g.roots.get(id)
+	if !ok {
+		return
+	}
+
+	for _, child := range n.children.nodes {
+		child.removeParent(n)
+	}
+
+	g.roots.remove(n)
+	g.nodes.remove(n)
 }
 
 type edges struct {
@@ -69,14 +89,14 @@ func (e *edges) updateOrder() {
 	sort.Strings(e.order)
 }
 
-func (e *edges) addNode(nodes ...*node) {
+func (e *edges) add(nodes ...*node) {
 	for _, n := range nodes {
 		e.nodes[n.id] = n
 	}
 	e.updateOrder()
 }
 
-func (e *edges) removeNode(n *node) {
+func (e *edges) remove(n *node) {
 	delete(e.nodes, n.id)
 	e.updateOrder()
 }
@@ -86,7 +106,7 @@ func (e *edges) get(id string) (*node, bool) {
 	return n, ok
 }
 
-func (e *edges) getInOrder() []*node {
+func (e *edges) listInOrder() []*node {
 	nodes := make([]*node, len(e.order), len(e.order))
 	for i, id := range e.order {
 		nodes[i] = e.nodes[id]
@@ -98,14 +118,8 @@ func (e *edges) any() bool {
 	return len(e.nodes) > 0
 }
 
-func (e *edges) pop() (*node, bool) {
-	if !e.any() {
-		return nil, false
-	}
-	n := e.nodes[e.order[0]]
-	delete(e.nodes, n.id)
-	e.updateOrder()
-	return n, true
+func (e *edges) first() *node {
+	return e.nodes[e.order[0]]
 }
 
 type node struct {
@@ -125,43 +139,83 @@ func newNode(id string, graph *graph) *node {
 }
 
 func (n *node) addChild(c *node) {
-	n.children.addNode(c)
-	c.parents.addNode(n)
-	n.graph.roots.removeNode(c)
+	n.children.add(c)
+	c.parents.add(n)
+	n.graph.roots.remove(c)
 }
 
 func (n *node) removeParent(p *node) {
-	n.parents.removeNode(p)
-	p.children.removeNode(n)
+	n.parents.remove(p)
+	p.children.remove(n)
+	if !n.parents.any() {
+		n.graph.roots.add(n)
+	}
+}
+
+func (n *node) time() int {
+	return int(n.id[0]-'A') + 1
 }
 
 func getExecOrder(input string) string {
 	nodeGraph := parseInput(input)
 
-	stack := nodeGraph.roots.getInOrder()
-	var top *node
-
 	order := ""
 
-	for len(stack) > 0 {
-		top, stack = stack[0], stack[1:]
-		if top.parents.any() || strings.Contains(order, top.id) {
-			continue
-		}
+	for nodeGraph.roots.any() {
+		top := nodeGraph.popRoot()
 		order = fmt.Sprintf("%s%s", order, top.id)
-
-		stack = append(top.children.getInOrder(), stack...)
-
-		for _, child := range top.children.nodes {
-			child.removeParent(top)
-		}
-
-		sort.Slice(stack, func(i, j int) bool {
-			return stack[i].id < stack[j].id
-		})
 	}
 
 	return order
+}
+
+type work struct {
+	remaining int
+	nodeID    string
+}
+
+func newWork(n *node, stepTime int) work {
+	remaining := int(n.id[0]-'A') + 1
+	return work{
+		remaining: remaining,
+		nodeID:    n.id,
+	}
+}
+
+func getParalellExecTime(input string, workerCount, stepTime int) int {
+	nodeGraph := parseInput(input)
+	workers := make(map[string]int)
+
+	time := 0
+
+	for nodeGraph.nodes.any() || len(workers) > 0 {
+		if len(workers) > 0 {
+			time++
+		}
+		for nodeID := range workers {
+			workers[nodeID]--
+			if workers[nodeID] == 0 {
+				delete(workers, nodeID)
+				nodeGraph.removeRootNode(nodeID)
+			}
+		}
+		availableCount := workerCount - len(workers)
+		roots := make([]*node, 0, 0)
+		for _, n := range nodeGraph.roots.listInOrder() {
+			_, inProgress := workers[n.id]
+			if !inProgress {
+				roots = append(roots, n)
+			}
+		}
+
+		for availableCount > 0 && len(roots) > 0 {
+			availableCount--
+			workers[roots[0].id] = roots[0].time() + stepTime
+			roots = roots[1:]
+		}
+	}
+
+	return time
 }
 
 var parser = regexp.MustCompile(`Step (\w) must be finished before step (\w) can begin.`)
@@ -188,7 +242,7 @@ func parseInput(input string) *graph {
 
 	for parent := range instructions {
 		parentNode := nodeGraph.getNode(parent)
-		nodeGraph.roots.addNode(parentNode)
+		nodeGraph.roots.add(parentNode)
 	}
 
 	for parent, children := range instructions {
