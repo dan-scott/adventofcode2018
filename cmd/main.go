@@ -11,6 +11,7 @@ import (
 	"github.com/dan-scott/adventofcode2018/days/day6"
 	"github.com/dan-scott/adventofcode2018/days/day7"
 	"github.com/dan-scott/adventofcode2018/days/day8"
+	"github.com/dan-scott/adventofcode2018/days/day9"
 
 	"github.com/dan-scott/adventofcode2018/domain"
 )
@@ -24,6 +25,7 @@ var solvers = []domain.Day{
 	day6.New(),
 	day7.New(),
 	day8.New(),
+	day9.New(),
 }
 
 func main() {
