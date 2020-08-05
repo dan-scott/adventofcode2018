@@ -20,7 +20,7 @@ func solvePart1() interface{} {
 }
 
 func solvePart2() interface{} {
-	return ""
+	return getRootValue(input)
 }
 
 type node struct {
@@ -42,10 +42,34 @@ func (n *node) sum() int {
 	return total
 }
 
+func (n *node) value() int {
+	total := 0
+	childCt := len(n.children)
+
+	if childCt == 0 {
+		for _, v := range n.metadata {
+			total += v
+		}
+	} else {
+		for _, m := range n.metadata {
+			if m <= childCt && m > 0 {
+				total += n.children[m-1].value()
+			}
+		}
+	}
+
+	return total
+}
+
 func sumMetadata(input string) int {
 	root := parseInput(input)
 
 	return root.sum()
+}
+
+func getRootValue(input string) int {
+	root := parseInput(input)
+	return root.value()
 }
 
 func parseInput(input string) *node {
