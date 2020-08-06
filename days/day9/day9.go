@@ -19,7 +19,7 @@ func solvePart1() interface{} {
 }
 
 func solvePart2() interface{} {
-	return ""
+	return getWinningScore(427, 7072300)
 }
 
 type marbleCircle []int
