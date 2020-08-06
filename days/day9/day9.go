@@ -22,53 +22,60 @@ func solvePart2() interface{} {
 	return getWinningScore(427, 7072300)
 }
 
+type marble struct {
+	next  *marble
+	prev  *marble
+	value int
+}
+
+func (m *marble) insertNew(value int) *marble {
+	n := &marble{
+		next:  m.next,
+		prev:  m,
+		value: value,
+	}
+	m.next.prev = n
+	m.next = n
+	return n
+}
+
+func (m *marble) remove() *marble {
+	next := m.next
+	m.prev.next = m.next
+	m.next.prev = m.prev
+	m.next = nil
+	m.prev = nil
+	return next
+}
+
 type marbleCircle []int
 
 func getWinningScore(players, worth int) int {
-	marbles := make([]int, worth+1, worth+1)
-	for w := 0; w < worth+1; w++ {
-		marbles[w] = w
-	}
 
 	score := make([]int, players, players)
 	for p := 0; p < players; p++ {
 		score[p] = 0
 	}
 
-	circle := make([]int, 1, 1)
+	marble := &marble{
+		value: 0,
+	}
+	marble.next = marble
+	marble.prev = marble
 
-	circle[0] = marbles[0]
-	marbles = marbles[1:]
-
-	current := 0
+	value := 0
 	player := 0
 
-	for len(marbles) > 0 {
-		marble := marbles[0]
-
-		if marble%23 == 0 {
-			score[player] += marble
-			current = (current - 7 + len(circle)) % len(circle)
-			score[player] += circle[current]
-			circle = append(circle[0:current], circle[current+1:]...)
-
+	for value <= worth {
+		value++
+		if value%23 == 0 {
+			score[player] += value
+			marble = marble.prev.prev.prev.prev.prev.prev.prev
+			score[player] += marble.value
+			marble = marble.remove()
 		} else {
-
-			nextIdx := (current + 2) % len(circle)
-
-			if nextIdx == 0 {
-				circle = append(circle, marble)
-				current = len(circle) - 1
-			} else {
-				circle = append(circle, 0)
-				copy(circle[nextIdx+1:], circle[nextIdx:])
-				circle[nextIdx] = marble
-				current = nextIdx
-			}
-
+			marble = marble.next.insertNew(value)
 		}
-
-		marbles = marbles[1:]
 		player = (player + 1) % players
 	}
 
