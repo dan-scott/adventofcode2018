@@ -21,7 +21,8 @@ func solvePart1() interface{} {
 }
 
 func solvePart2() interface{} {
-	return ""
+	loc, size := findMaxDynamic(18)
+	return fmt.Sprintf("%v,%v,%v", loc.x, loc.y, size)
 }
 
 func powerLvl(x, y, serial int) int {
@@ -35,6 +36,10 @@ func powerLvl(x, y, serial int) int {
 
 type vec2 struct {
 	x, y int
+}
+
+func (v vec2) add(x, y int) vec2 {
+	return vec2{v.x + x, v.y + y}
 }
 
 func calcGrid(serial int) map[vec2]int {
@@ -70,6 +75,46 @@ func findMax(serial int) vec2 {
 		}
 	}
 	return maxVec
+}
+
+func findMaxDynamic(serial int) (vec2, int) {
+	grid := calcGrid(serial)
+	max := math.MinInt32
+	maxSize := 0
+	var maxLoc vec2
+
+	for x := 1; x <= 299; x++ {
+		for y := 1; y <= 299; y++ {
+			tl := vec2{x, y}
+			ms := int(math.Min(float64(300-x), float64(300-y)))
+			val, size := calcPower(grid, tl, ms)
+			if val > max {
+				max = val
+				maxLoc = tl
+				maxSize = size
+			}
+		}
+	}
+
+	return maxLoc, maxSize
+}
+
+func calcPower(grid map[vec2]int, pos vec2, maxSize int) (int, int) {
+	max := math.MinInt32
+	ms := 0
+	val := grid[pos]
+	for s := 1; s <= maxSize; s++ {
+		for p := 0; p < s; p++ {
+			val += grid[pos.add(s, p)] + grid[pos.add(p, s)]
+		}
+		val += grid[pos.add(s, s)]
+		if val > max {
+			max = val
+			ms = s
+		}
+	}
+
+	return max, ms + 1
 }
 
 func printGrid(grid map[vec2]int) {

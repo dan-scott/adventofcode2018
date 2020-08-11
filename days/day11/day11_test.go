@@ -23,7 +23,7 @@ func TestPowerLevel(t *testing.T) {
 	}
 }
 
-func TestMaxLEvel(t *testing.T) {
+func TestMaxLevel(t *testing.T) {
 	cases := []struct{ x, y, serial int }{
 		{33, 45, 18},
 		{21, 61, 42},
@@ -33,6 +33,21 @@ func TestMaxLEvel(t *testing.T) {
 			loc := findMax(tc.serial)
 			if loc.x != tc.x && loc.y != tc.y {
 				t.Fatalf("Expected location to be %v, %v but got %v", tc.x, tc.y, loc)
+			}
+		})
+	}
+}
+
+func TestMaxDynamic(t *testing.T) {
+	cases := []struct{ x, y, size, serial int }{
+		{90, 269, 16, 18},
+		{232, 251, 12, 42},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("Serial %v", tc.serial), func(t *testing.T) {
+			loc, size := findMaxDynamic(tc.serial)
+			if loc.x != tc.x && loc.y != tc.y && size != tc.size {
+				t.Fatalf("Expected location to be %v, %v with size %v but got %v, %v", tc.x, tc.y, tc.size, loc, size)
 			}
 		})
 	}
