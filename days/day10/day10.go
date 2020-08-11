@@ -53,6 +53,7 @@ func (l light) move() light {
 func converge(input string) {
 	next := parseInput(input)
 	prev := make([]light, len(next), len(next))
+	seconds := 0
 
 	for true {
 		next, prev = prev, next
@@ -65,9 +66,11 @@ func converge(input string) {
 		nextArea := area(next)
 
 		if nextArea > prevArea {
+			fmt.Printf("\nshowed after %v seconds", seconds)
 			printMap(prev)
 			break
 		}
+		seconds++
 
 	}
 
